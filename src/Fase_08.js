@@ -21,10 +21,6 @@ class Fase_08 extends Phaser.Scene {
       frameWidth: 64,
       frameHeight: 64,
     });
-    this.load.spritesheet('fball_sp', 'assets/spritesheets/fireball.png', {
-      frameWidth: 32,
-      frameHeight: 32,
-    });
     this.load.spritesheet('gelinho', 'assets/spritesheets/gelinho.png', {
       frameWidth: 32,
       frameHeight: 48,
@@ -61,14 +57,6 @@ class Fase_08 extends Phaser.Scene {
       frameRate: 5,
       repeat: -1
     });
-
-    this.anims.create({
-      key: 'fire_anim',
-      frames: this.anims.generateFrameNumbers('fball_sp', { frames: [0, 1, 2, 3, 4] }),
-      frameRate: 10,
-      repeat: -1
-    });
-
   }
 
   // função para criação dos elementos
@@ -109,9 +97,9 @@ class Fase_08 extends Phaser.Scene {
     this.enemy.bar_bg.setVisible(false);
     this.enemy.bar_fg.setVisible(false);
     this.zoneEnemy = this.add.zone(500, 200).setSize(100, 100);
-   this.enemy.setVisible(false);
-    
-  this.shoot_golem = this.physics.add.group();
+    this.enemy.setVisible(false);
+    //criação das balas do inimigo
+    this.shoot_golem = this.physics.add.group();
     for (let i=0; i<2; i++){
       var shoot2 = this.physics.add.sprite(-10, -10, 'gelinho', 0);
       shoot2.setScale(0.5);
@@ -130,13 +118,10 @@ class Fase_08 extends Phaser.Scene {
     this.wallsLayer.setCollisionBetween(17, 50, true);
     this.physics.add.collider(this.player, this.wallsLayer);
     this.physics.add.collider(this.player, this.mago);
-    this.physics.add.overlap(this.player, this.shoot_golem, this.bulletHit, null, this);
-    this.physics.add.overlap(this.player, this.enemy, this.enemyHit, null, this);
 
-    /*this.fballs = this.physics.add.group({
-      key: 'fball',
-    });
-    this.physics.add.collider(this.fballs, this.wallsLayer, this.fball_hit, null, this);*/
+    //chama as funções de dano no enemy e no player
+    this.physics.add.overlap(this.player, this.shoot_golem, this.bulletHit, null, this);
+    this.physics.add.overlap(this.player.arrows, this.enemy, this.enemyHit, null, this);
 
     // ligação das teclas de movimento
     this.keyA = this.input.keyboard.addKey("A");
@@ -235,7 +220,7 @@ class Fase_08 extends Phaser.Scene {
   // update é chamada a cada novo quadro
   update() {
     console.log(this.enemy);
-    // verifica e trata se jogador em zona ativa
+    // verifica e trata se jogador em zona ativa e não repete caso ele tenha acertado uma questão
     if(this.cont == 0){
       this.checkActiveZone();
     }
@@ -249,7 +234,8 @@ class Fase_08 extends Phaser.Scene {
     if (!this.keySPACE.isDown) {
       this.spacePressed = false;
     }
-    if(this.cont > 0){
+    //fica atirando no player e para quando o inimigo morre
+    if(this.cont > 0 && this.cont != 25){
       this.shoot_golem.getMatching('active', true).forEach(function(shoot2){
         var dx = shoot2.body.x - this.enemy.x;
         var dy = shoot2.body.y - this.enemy.y;
@@ -261,6 +247,7 @@ class Fase_08 extends Phaser.Scene {
             shoot2.body.setVelocity(0, 0);
         }
       }, this);
+
     }
 
     // dano na agua gelada
@@ -280,6 +267,7 @@ class Fase_08 extends Phaser.Scene {
     var vx = this.player.x - this.enemy.x
     var vy = this.player.y - this.enemy.y
     var scl = 170/Math.sqrt(vx*vx+vy*vy)
+    //atira caso o inimigo já tenha aparecido
     if (shoot_golem1 && this.cont > 0){
         shoot_golem1.body.reset(this.enemy.x, this.enemy.y);
         shoot_golem1.setActive(true);
@@ -296,6 +284,7 @@ class Fase_08 extends Phaser.Scene {
     });
   }
 
+  //função que da dano no player caso ele seja acertado pelo tiro do inimigo
   bulletHit(player, shoot_golem1){
     player.getDamage(1);
     shoot_golem1.setActive(false);
@@ -306,10 +295,12 @@ class Fase_08 extends Phaser.Scene {
     }
   }
 
-  enemyHit (player, enemy){
-    enemy.getDamage(3);
+  //da dano no inimigo caso seja acertado por uma flecha do player
+  enemyHit (enemy){
+    this.enemy.getDamage(0.5);
     if (enemy.getHPValue() == 0){
         localStorage.setItem('hp',100);
+        this.cont=25;//para caso o inimigo morra, pare de atirar
        // player.die();
     }
 }
@@ -390,7 +381,7 @@ class Fase_08 extends Phaser.Scene {
 
 function acertou_fcn(ptr) {
   console.log("acertou");
-  this.cont++;
+  this.cont++;//para não mostrar mais perguntas
   this.dialogs.hideBox();
   this.interact_txt.setVisible(false);
   this.enemy.setVisible(true);
@@ -401,7 +392,7 @@ function acertou_fcn(ptr) {
   this.enemy.bar_bg.setVisible(true);
   this.enemy.bar_fg.setVisible(true);
   if(this.player.getHPValue() <= 80){
-    this.player.getDamage(-20);
+    this.player.getDamage(-20);//ganha vida
   }
   this.player.has_bow = true;
   
@@ -411,7 +402,7 @@ function acertou_fcn(ptr) {
 function errou_fcn(ptr) {
   console.log("errou");
   if(this.player.getHPValue() >= 10){
-    this.player.getDamage(20);
+    this.player.getDamage(20);//perde vida
   }else{
     //this.player.bar_bg.setVisible(false);
    // this.player.bar_fg.setVisible(false);
